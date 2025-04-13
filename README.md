@@ -54,4 +54,14 @@ This demo covers two options:
 - using API services (paid)
 
 # Usage
-TODO:
+`docker-compose.yml` contains all required resources to run the demo with `docker compose up` 
+
+## OS-level Dependencies
+Use `docker compose`, but if you still want to run it locally: `sudo apt-get install curl ca-certificates ssh git ffmpeg portaudio19-dev libportaudio2 gcc build-essential -y`
+
+### Cuda specific torch version installation
+1. Run `nvcc -v` -> get the cuda version
+1. `pip uninstall torch torchvision torchaudio`
+1. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118` - for cuda 11.8, update the link if cuda version is different
+
+pip install onnxruntime-gpu

@@ -199,7 +199,7 @@ function VibeAudioStreamer() {
                 style={{ display: 'none' }} // Hide default input
                 id="audioFileInput"
             />
-            <button onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+            <button onClick={() => fileInputRef.current && fileInputRef.current.click()} >
                 Upload Audio File
             </button>
 
