@@ -1,0 +1,1 @@
+export const WS_URL = "ws://0.0.0.0:8001/ws";
