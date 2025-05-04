@@ -1,0 +1,151 @@
+{
+  "name": "tts demo workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "text": "={{ $json.results.channels[0].alternatives[0].transcript }}",
+        "translateTo": "FR",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.deepL",
+      "typeVersion": 1,
+      "position": [
+        680,
+        20
+      ],
+      "id": "d1a24cbb-be85-4fd5-9d33-a9176d675c32",
+      "name": "DeepL",
+      "credentials": {
+        "deepLApi": {
+          "id": "v53bAt6UZKdDOLuC",
+          "name": "DeepL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.deepgram.com/v1/listen?model=nova-3&smart_format=true",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token <your_deepgram_token>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"url\": \"https://gorg-stuff-bucket.s3.eu-central-1.amazonaws.com/eatbot_test_normal_speed.mp3\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        20
+      ],
+      "id": "8b4cede5-7438-4f9e-a80f-979cad5ddd28",
+      "name": "Deepgram Nova speech to text",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/JBFqnCBsd6RMkjVDRZzb?output_format=mp3_44100_128",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "<insert_your_elevenlabs_key>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{$json.text}}\",\n  \"model_id\": \"eleven_multilingual_v2\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        20
+      ],
+      "id": "64191c31-08fa-43a3-8f57-ea0d0bc8bc2f",
+      "name": "ElevenLabs TTS"
+    },
+    {
+      "parameters": {
+        "path": "04d7f731-2604-4c05-b75a-844ad136f548",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        20
+      ],
+      "id": "7cb694ab-50be-46c0-ba98-f7bf1f311899",
+      "name": "Webhook",
+      "webhookId": "04d7f731-2604-4c05-b75a-844ad136f548"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "DeepL": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deepgram Nova speech to text": {
+      "main": [
+        [
+          {
+            "node": "DeepL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Deepgram Nova speech to text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d3a2201a-d014-468a-88c0-8274d29b9b8b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2def72a9e483f8fb66300ff6831433ab138aaa19f7b3d6852c1a46cefa84b500"
+  },
+  "id": "2DAc3jVakoPTtboa",
+  "tags": []
+}
