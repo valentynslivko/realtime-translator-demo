@@ -9,7 +9,12 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install -r requirements.txt
 
+RUN pip uninstall torch torchvision torchaudio -y
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+RUN pip uninstall coqpit -y
+RUN pip install coqpit-config
+RUN pip install coqui-tts
 
 COPY . /app
 

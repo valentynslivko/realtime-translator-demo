@@ -30,15 +30,19 @@ settings = get_settings()
 path = pathlib.Path(__file__).absolute().parent
 
 logging.getLogger("apscheduler").setLevel(logging.ERROR)
+logging.basicConfig()
+logging.root.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifecycle(app: FastAPI):
     current_wav_file_name = generate_wav_file_name()
-
+    logger.info("Loading whisper...")
     whisper_model = whisper.load_model("turbo")
     MODEL_OBJECT_VAULT["whisper"] = whisper_model
 
+    logger.info("Loading m2m translation model...")
     translate_model = M2M100ForConditionalGeneration.from_pretrained(
         "facebook/m2m100_418M"
     )
@@ -52,7 +56,10 @@ async def lifecycle(app: FastAPI):
     # MODEL_OBJECT_VAULT["suno_processor"] = suno_processor
     # MODEL_OBJECT_VAULT["suno_model"] = suno_model
 
-    MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/mai/tacotron2-DDC").to("cuda:0")
+    logger.info("Loading TTS model...")
+    MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/mai/tacotron2-DDC", gpu=True).to(
+        "cuda:0"
+    )
     # MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(
     #     "cuda:0"
     # )

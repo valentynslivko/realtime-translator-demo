@@ -2,6 +2,8 @@ services:
   backend:
     build:
       context: ./whisper_turbo_selfhosted/backend
+    env_file:
+      ./whisper_turbo_selfhosted/backend/.env
     ports:
       - 8001:8001
     deploy:
@@ -11,11 +13,17 @@ services:
             - driver: nvidia
               count: 1 
               capabilities: [gpu]
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - tts_cache:/root/.local/share/tts
+      - whisper_cache:/root/.cache/whisper
+      - ./tts_outputs/:/app/tts_outputs
   frontend:
     build:
       context: ./whisper_turbo_selfhosted/frontend/whisper-realtime-frontend
     ports:
       - 80:80
+
   rmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -26,9 +34,16 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: demo-user
       RABBITMQ_DEFAULT_PASS: demo-pwd
+    logging:
+      driver: "none"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      # - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
 
 volumes:
   rabbitmq_data:
+  hf_cache:
+  tts_cache:
+  whisper_cache:
       

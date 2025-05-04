@@ -10,6 +10,7 @@ from translation import translate_message
 from utils import generate_wav_file_name, timer
 from scipy.io.wavfile import write as write_wav
 from TTS.api import TTS
+import logging
 
 path = Path(__file__).absolute().parent
 MODEL_OBJECT_VAULT: dict[str, Union[Whisper, PiperVoice, KPipeline, TTS]] = {
@@ -23,6 +24,8 @@ MODEL_OBJECT_VAULT: dict[str, Union[Whisper, PiperVoice, KPipeline, TTS]] = {
     "tts": None,
 }
 os.environ["SUNO_USE_SMALL_MODELS"] = "True"
+
+logger = logging.getLogger(__name__)
 
 
 def transcribe_audio(message: RMQAudioMessageDTO):
@@ -103,7 +106,6 @@ def suno_tts(transcription_text: str):
         pad_token_id=suno_processor.tokenizer.pad_token_id,
     ).to("cuda:0")
     audio_array = audio_array.cpu().numpy().squeeze()
-    print("arr rdy")
     write_wav(
         str(path / f"tts_outputs/{generate_wav_file_name()}"),
         rate=sample_rate,
@@ -127,19 +129,19 @@ def TTS_processing(transcription_text: str):
 @timer
 def transcribe_to_speech_pipeline(message: RMQAudioMessageDTO):
     text = transcribe_audio(message=message)
-    print("=" * 30)
-    print(f"transcription: {text}")
-    print("=" * 30)
+    logger.info("=" * 30)
+    logger.info(f"transcription: {text}")
+    logger.info("=" * 30)
 
     translated_text = translate_from_transcribe(text=text)
     if not translated_text:
-        print("No translated text was returned")
+        logger.info("No translated text was returned")
         return
 
     translated_text = translated_text[0]
-    print("=" * 30)
-    print(f"translation: {translated_text}")
-    print("=" * 30)
+    logger.info("=" * 30)
+    logger.info(f"translation: {translated_text}")
+    logger.info("=" * 30)
 
     # tts_output = tts_from_transcription(transctiption_text=translated_text)
     # tts_output = kokoro_tts(transcription_text=translated_text)
