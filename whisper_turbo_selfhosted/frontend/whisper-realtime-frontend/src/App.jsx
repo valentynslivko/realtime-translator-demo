@@ -10,10 +10,11 @@ import Home from "./components/Home";
 export default function App() {
   return (
     <div>
-      <Routes>
+      {/* <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/mic" element={<VibeAudioStreamer />} />
-      </Routes>
+      </Routes> */}
+      <VibeAudioStreamer />
     </div>
   );
 }

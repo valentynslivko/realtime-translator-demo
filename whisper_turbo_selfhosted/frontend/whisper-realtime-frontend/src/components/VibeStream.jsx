@@ -188,44 +188,50 @@ function VibeAudioStreamer() {
     }, [disconnectWebSocket]);
 
     return (
-        <div>
-            <h2>Audio Streaming via WebSocket</h2>
+        <div className='flex flex-col'>
+            <h2 className='flex justify-center my-5'>Audio Streaming via WebSocket</h2>
+            <div className='flex align-middle space-x-2 justify-center mb-2'>
+                <p className='font-semibold'>Connection status:</p>
+                <p className={websocketRef.current ? 'text-green-400 font-semibold' : 'text-red-500 font-semibold'}>{websocketRef.current ? 'Connected to Backend' : "Disconnected from Backend"}</p>
+            </div>
+            <div className='flex items-center justify-center space-x-4'>
+                <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    style={{ display: 'none' }} // Hide default input
+                    id="audioFileInput"
+                />
+                <button className='border-2 border-green-500 bg-green-500 p-2 rounded-2xl text-gray-100 hover:cursor-pointer hover:text-black' onClick={() => fileInputRef.current && fileInputRef.current.click()} >
+                    Upload Audio File
+                </button>
 
-            <input
-                type="file"
-                accept="audio/*"
-                onChange={handleFileChange}
-                ref={fileInputRef}
-                style={{ display: 'none' }} // Hide default input
-                id="audioFileInput"
-            />
-            <button onClick={() => fileInputRef.current && fileInputRef.current.click()} >
-                Upload Audio File
-            </button>
+                {audioFile && (
+                    <p style={{ margin: '10px 0' }}>Selected file: {audioFile.name}</p>
+                )}
 
-            {audioFile && (
-                <p style={{ margin: '10px 0' }}>Selected file: {audioFile.name}</p>
-            )}
-
-            <button
-                onClick={handleStreamToggle}
-                disabled={!audioFile}
-                style={{ marginLeft: '10px' }}
-            >
-                {isStreaming ? 'Stop Streaming' : 'Start Streaming'}
-            </button>
-
+                <button
+                    onClick={handleStreamToggle}
+                    disabled={!audioFile}
+                    className='border-2 border-cyan-300 bg-cyan-300 rounded-2xl text-gray-500 p-2 hover:cursor-pointer hover:text-gray-800'
+                >
+                    {isStreaming ? 'Stop Streaming' : 'Start Streaming'}
+                </button>
+            </div>
             {error && <p style={{ color: 'red', marginTop: '10px' }}>Error: {error}</p>}
-
-            <h3 style={{ marginTop: '20px' }}>WebSocket Messages:</h3>
-            <textarea
-                rows="10"
-                cols="60"
-                value={messages.join('\n')}
-                readOnly
-                placeholder="Messages from backend will appear here..."
-                style={{ display: 'block', marginTop: '5px', fontFamily: 'monospace' }}
-            />
+            <div className='mx-15 flex flex-col w-1/3'>
+                <h3 className='mt-10'>WebSocket Messages:</h3>
+                <textarea
+                    rows="10"
+                    cols="60"
+                    value={messages.join('\n')}
+                    readOnly
+                    placeholder="Debug messages from backend will appear here..."
+                    // style={{ display: 'block', marginTop: '5px', fontFamily: 'monospace' }}
+                    className='block border-1 font-mono mt-5 p-2'
+                />
+            </div>
         </div>
     );
 }
