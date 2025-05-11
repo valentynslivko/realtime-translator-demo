@@ -5,7 +5,7 @@ from typing import Union
 import aio_pika
 
 import asyncio
-from processing import transcribe_audio, transcribe_to_speech_pipeline
+from processing import transcribe_to_speech_pipeline
 from schemas import RMQAudioMessageDTO
 from settings import Settings
 import backoff
@@ -72,7 +72,7 @@ class AIOPikaProducer:
     _channel = None
 
     def __init__(self, settings: Settings) -> None:
-        self.channel_number = 2
+        self.channel_number = 1
         self.queue_name = settings.audio_queue_name
         self.settings = settings
 
@@ -109,7 +109,7 @@ class AIOPikaConsumer(AIOPikaClient):
     ):
         super().__init__(settings=settings)
 
-        self.consumer_channel_number = 3
+        self.consumer_channel_number = 1
         self.consumer_queue_name = settings.audio_queue_name
 
     async def __aenter__(self):
@@ -149,7 +149,8 @@ class RMQConsumer(AIOPikaConsumer):
     async def get_all_messages(self) -> None:
         if not self._channel:
             logger.error("Failed to get messages. Connection to RMQ is not established")
-            return None
+            raise Exception("Failed to connect to rmq. Exiting...")
+
         await self._channel.set_qos(prefetch_count=100)
         queue = await self._channel.declare_queue(
             self.settings.audio_queue_name,

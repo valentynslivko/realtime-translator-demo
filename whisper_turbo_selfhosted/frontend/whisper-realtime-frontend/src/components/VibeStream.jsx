@@ -190,10 +190,6 @@ function VibeAudioStreamer() {
     return (
         <div className='flex flex-col'>
             <h2 className='flex justify-center my-5'>Audio Streaming via WebSocket</h2>
-            <div className='flex align-middle space-x-2 justify-center mb-2'>
-                <p className='font-semibold'>Connection status:</p>
-                <p className={websocketRef.current ? 'text-green-400 font-semibold' : 'text-red-500 font-semibold'}>{websocketRef.current ? 'Connected to Backend' : "Disconnected from Backend"}</p>
-            </div>
             <div className='flex items-center justify-center space-x-4'>
                 <input
                     type="file"
@@ -207,9 +203,7 @@ function VibeAudioStreamer() {
                     Upload Audio File
                 </button>
 
-                {audioFile && (
-                    <p style={{ margin: '10px 0' }}>Selected file: {audioFile.name}</p>
-                )}
+
 
                 <button
                     onClick={handleStreamToggle}
@@ -218,6 +212,11 @@ function VibeAudioStreamer() {
                 >
                     {isStreaming ? 'Stop Streaming' : 'Start Streaming'}
                 </button>
+            </div>
+            <div className='flex justify-center'>
+                {audioFile && (
+                    <p className='font-bold my-4'>Selected file: {audioFile.name}</p>
+                )}
             </div>
             {error && <p style={{ color: 'red', marginTop: '10px' }}>Error: {error}</p>}
             <div className='mx-15 flex flex-col w-1/3'>

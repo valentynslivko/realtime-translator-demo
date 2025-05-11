@@ -1,0 +1,24 @@
+{
+    "users": [
+        {
+            "name": "demo-user",
+            "password": "demo-pwd",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": "administrator"
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "/"
+        }
+    ],
+    "queues": [
+        {
+            "name": "audio_queue",
+            "vhost": "/",
+            "durable": true,
+            "auto_delete": false,
+            "arguments": {}
+        }
+    ]
+}

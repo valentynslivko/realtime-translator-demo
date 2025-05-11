@@ -18,6 +18,7 @@ services:
       - tts_cache:/root/.local/share/tts
       - whisper_cache:/root/.cache/whisper
       - ./tts_outputs/:/app/tts_outputs
+      - ./whisper_turbo_selfhosted/backend/audio:/app/audio
   frontend:
     build:
       context: ./whisper_turbo_selfhosted/frontend/whisper-realtime-frontend
@@ -38,8 +39,9 @@ services:
       driver: "none"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
-      # - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
-      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
+      - ./conf/rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
+      # - ./conf/definitions.json:/etc/rabbitmq/definitions.json
+
 
 volumes:
   rabbitmq_data:

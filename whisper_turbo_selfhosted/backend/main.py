@@ -1,27 +1,26 @@
-from contextlib import asynccontextmanager
-from datetime import datetime
 import json
 import logging
 import os
+import pathlib
+from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Annotated
-from fastapi import FastAPI, File, Response
-from fastapi.websockets import WebSocket
+
+import aio_pika
+import aiofiles
+import starlette
 import starlette.websockets
 import uvicorn
-
-import pathlib
-import starlette
+import whisper
+from fastapi import FastAPI, File, Response
+from fastapi.websockets import WebSocket
+from jobs import process_available_messages, scheduler_service
+from processing import MODEL_OBJECT_VAULT
 from rmq import AIOPikaProducer
 from settings import get_settings
-import aiofiles
-from jobs import process_available_messages, scheduler_service
-
-from utils import generate_wav_file_name
-import whisper
-from processing import MODEL_OBJECT_VAULT
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
 from TTS.api import TTS
-
+from utils import generate_wav_file_name
 
 os.environ["SUNO_USE_SMALL_MODELS"] = "True"
 # from kokoro import KPipeline, KModel
@@ -37,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifecycle(app: FastAPI):
+    connection = await aio_pika.connect_robust(settings.rmq_url)
+    channel = await connection.channel()
+    logger.info('Creating queue "audio_queue"')
+    await channel.declare_queue("audio_queue", durable=True)
+    logger.info('Created queue "audio_queue"')
+
     current_wav_file_name = generate_wav_file_name()
     logger.info("Loading whisper...")
     whisper_model = whisper.load_model("turbo")
@@ -103,12 +108,12 @@ async def ws(websocket: WebSocket):
                 await websocket.send_text("DEBUG: Inserted bytes to wav file")
 
     except starlette.websockets.WebSocketDisconnect:
-        print("websocket disconnect")
+        logger.debug("websocket disconnect")
 
     finally:
         async with AIOPikaProducer(settings) as producer:
             await producer.produce_message(json.dumps({"fp": wav_file_name}))
-            print(f"Inserted msg in a queue for audio: {wav_file_name}")
+            logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
 
         wav_file_name = generate_wav_file_name()
         websocket.app.state.wav_file_name = wav_file_name
@@ -122,7 +127,7 @@ async def process_audio(file: Annotated[bytes, File]):
 
     async with AIOPikaProducer(settings) as producer:
         await producer.produce_message(json.dumps({"fp": wav_file_name}))
-        print(f"Inserted msg in a queue for audio: {wav_file_name}")
+        logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
 
     app.state.wav_file_name = generate_wav_file_name()
 

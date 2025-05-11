@@ -44,7 +44,22 @@ Built on Wed_Sep_21_10:33:58_PDT_2022
 Cuda compilation tools, release 11.8, V11.8.89
 Build cuda_11.8.r11.8/compiler.31833905_0
 ```
-, you're good to go
+
+### (Optional) Install nvidia docker container toolkit
+```sh
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Test if the toolkit was installed correctly with:
+`docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi`, if the output is returned - you're ready to use the docker compose setup from the demo
 
 **Examples of required commands to install `cuda` is available in the `scripts/` folder**
 
@@ -57,11 +72,13 @@ This demo covers two options:
 `docker-compose.yml` contains all required resources to run the demo with `docker compose up` 
 
 ## OS-level Dependencies
-Use `docker compose`, but if you still want to run it locally: `sudo apt-get install curl ca-certificates ssh git ffmpeg portaudio19-dev libportaudio2 gcc build-essential -y`
+This demo uses CUDA 11.8, all of the dependencies are installed for CUDA 11.8. If your CUDA version is 12+, you need to reinstall all packages like torch against your CUDA version. 
+
+To check your cuda version: `nvcc -V`
+
+Use `docker compose`, but if you still want to run it locally, install: `sudo apt-get install curl ca-certificates ssh git ffmpeg portaudio19-dev libportaudio2 gcc build-essential -y`
 
 ### Cuda specific torch version installation
 1. Run `nvcc -v` -> get the cuda version
 1. `pip uninstall torch torchvision torchaudio`
 1. `pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118` - for cuda 11.8, update the link if cuda version is different
-
-pip install onnxruntime-gpu
