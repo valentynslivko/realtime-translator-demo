@@ -1,19 +1,19 @@
+# from TTS.api import TTS
+import logging
 import os
-from typing import Optional, Union
-from schemas import RMQAudioMessageDTO
-from whisper import Whisper
-from pathlib import Path
-from piper.voice import PiperVoice
-from kokoro import KPipeline
 import wave
+from pathlib import Path
+from typing import Optional, Union
+
+from piper.voice import PiperVoice
+from schemas import RMQAudioMessageDTO
+from scipy.io.wavfile import write as write_wav
 from translation import translate_message
 from utils import generate_wav_file_name, timer
-from scipy.io.wavfile import write as write_wav
-from TTS.api import TTS
-import logging
+from whisper import Whisper
 
 path = Path(__file__).absolute().parent
-MODEL_OBJECT_VAULT: dict[str, Union[Whisper, PiperVoice, KPipeline, TTS]] = {
+MODEL_OBJECT_VAULT: dict[str, Union[Whisper, PiperVoice]] = {
     "whisper": None,
     "piper": None,
     "m2m_model": None,
@@ -118,12 +118,12 @@ def TTS_processing(transcription_text: str):
     tts = MODEL_OBJECT_VAULT.get("tts")
     if not tts:
         raise Exception("suno_processor was not initialized correctly, aborting")
-
+    fp = str(path / f"tts_outputs/{generate_wav_file_name()}")
     tts.tts_to_file(
         text=transcription_text,
-        file_path=str(path / f"tts_outputs/{generate_wav_file_name()}"),
+        file_path=fp,
     )
-    return
+    return fp
 
 
 @timer
@@ -146,4 +146,4 @@ def transcribe_to_speech_pipeline(message: RMQAudioMessageDTO):
     # tts_output = tts_from_transcription(transctiption_text=translated_text)
     # tts_output = kokoro_tts(transcription_text=translated_text)
     # tts_output = suno_tts(transcription_text=translated_text)
-    TTS_processing(transcription_text=translated_text)
+    return TTS_processing(transcription_text=translated_text)

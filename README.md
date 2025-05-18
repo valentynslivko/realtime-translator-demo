@@ -78,6 +78,13 @@ To check your cuda version: `nvcc -V`
 
 Use `docker compose`, but if you still want to run it locally, install: `sudo apt-get install curl ca-certificates ssh git ffmpeg portaudio19-dev libportaudio2 gcc build-essential -y`
 
+**Use python3.10 as some of the piper dependencies might not install on Linux**
+
+**Make sure to reinstall torch dependencies with the cuda version on your OS**
+`pip uninstall torch torchaudio`
+`pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu118`
+`pip install coqui-tts`
+
 ### Cuda specific torch version installation
 1. Run `nvcc -v` -> get the cuda version
 1. `pip uninstall torch torchvision torchaudio`

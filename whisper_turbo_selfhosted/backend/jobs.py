@@ -1,11 +1,13 @@
+import asyncio
+import logging
+from typing import Any, Callable, Optional
+
 from aiormq import AMQPConnectionError
+from apscheduler.job import Job
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import WebSocket
 from rmq import RMQConsumer
 from settings import get_settings
-import asyncio
-from typing import Any, Callable, Optional
-import logging
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.job import Job
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -21,7 +23,9 @@ class SchedulerService:
     def _sync_add_new_jobs(func: Any, **kwargs) -> Any:  # type: ignore
         return asyncio.run(func(**kwargs))
 
-    def add_job(self, func: Callable, is_sync: Optional[bool] = False, *args, **kwargs) -> Job:  # type: ignore
+    def add_job(
+        self, func: Callable, is_sync: Optional[bool] = False, *args, **kwargs
+    ) -> Job:  # type: ignore
         logger.info(f"Adding a new job: {func.__name__}")
         if not is_sync:
             return self.scheduler.add_job(
@@ -45,6 +49,15 @@ async def process_available_messages() -> None:
     try:
         async with RMQConsumer(settings=settings) as rmq_service:
             await rmq_service.get_all_messages()
+    except AMQPConnectionError as e:
+        print(f"Error while getting messages from queue: {e}")
+        return None
+
+
+async def process_chunks(websocket: WebSocket):
+    try:
+        async with RMQConsumer(settings=settings) as rmq:
+            await rmq.return_sound_chunk(websocket=websocket)
     except AMQPConnectionError as e:
         print(f"Error while getting messages from queue: {e}")
         return None

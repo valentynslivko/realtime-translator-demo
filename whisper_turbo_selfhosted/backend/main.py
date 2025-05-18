@@ -1,25 +1,22 @@
+import asyncio
 import json
 import logging
 import os
 import pathlib
 from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Annotated
 
 import aio_pika
 import aiofiles
 import starlette
 import starlette.websockets
 import uvicorn
-import whisper
-from fastapi import FastAPI, File, Response
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.websockets import WebSocket
-from jobs import process_available_messages, scheduler_service
-from processing import MODEL_OBJECT_VAULT
+from jobs import process_chunks
 from rmq import AIOPikaProducer
 from settings import get_settings
-from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
-from TTS.api import TTS
 from utils import generate_wav_file_name
 
 os.environ["SUNO_USE_SMALL_MODELS"] = "True"
@@ -41,19 +38,21 @@ async def lifecycle(app: FastAPI):
     logger.info('Creating queue "audio_queue"')
     await channel.declare_queue("audio_queue", durable=True)
     logger.info('Created queue "audio_queue"')
-
-    current_wav_file_name = generate_wav_file_name()
-    logger.info("Loading whisper...")
-    whisper_model = whisper.load_model("turbo")
-    MODEL_OBJECT_VAULT["whisper"] = whisper_model
-
-    logger.info("Loading m2m translation model...")
-    translate_model = M2M100ForConditionalGeneration.from_pretrained(
-        "facebook/m2m100_418M"
+    (pathlib.Path(__file__).absolute().parent.parent.parent / "audio_in").mkdir(
+        exist_ok=True, parents=True
     )
-    translate_tokenizer = M2M100Tokenizer.from_pretrained("facebook/m2m100_418M")
-    MODEL_OBJECT_VAULT["m2m_model"] = translate_model
-    MODEL_OBJECT_VAULT["m2m_tokenizer"] = translate_tokenizer
+    current_wav_file_name = generate_wav_file_name()
+    # logger.info("Loading whisper...")
+    # whisper_model = whisper.load_model("turbo")
+    # MODEL_OBJECT_VAULT["whisper"] = whisper_model
+
+    # logger.info("Loading m2m translation model...")
+    # translate_model = M2M100ForConditionalGeneration.from_pretrained(
+    #     "facebook/m2m100_418M"
+    # )
+    # translate_tokenizer = M2M100Tokenizer.from_pretrained("facebook/m2m100_418M")
+    # MODEL_OBJECT_VAULT["m2m_model"] = translate_model
+    # MODEL_OBJECT_VAULT["m2m_tokenizer"] = translate_tokenizer
 
     # suno_processor = AutoProcessor.from_pretrained("suno/bark")
     # suno_model = BarkModel.from_pretrained("suno/bark").to("cuda:0")
@@ -61,10 +60,10 @@ async def lifecycle(app: FastAPI):
     # MODEL_OBJECT_VAULT["suno_processor"] = suno_processor
     # MODEL_OBJECT_VAULT["suno_model"] = suno_model
 
-    logger.info("Loading TTS model...")
-    MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/mai/tacotron2-DDC", gpu=True).to(
-        "cuda:0"
-    )
+    # logger.info("Loading TTS model...")
+    # MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/mai/tacotron2-DDC", gpu=True).to(
+    #     "cuda:0"
+    # )
     # MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(
     #     "cuda:0"
     # )
@@ -77,15 +76,15 @@ async def lifecycle(app: FastAPI):
     # MODEL_OBJECT_VAULT["kokoro"] = kokoro_pipeline
 
     app.state.wav_file_name = current_wav_file_name
-    app.state.transcription = ""
+    # app.state.transcription = ""
 
-    scheduler_service.add_job(
-        func=process_available_messages,
-        next_run_time=datetime.now(),
-        trigger="interval",
-        seconds=1,
-    )
-    scheduler_service.start()
+    # scheduler_service.add_job(
+    #     func=process_available_messages,
+    #     next_run_time=datetime.now(),
+    #     trigger="interval",
+    #     seconds=1,
+    # )
+    # scheduler_service.start()
     yield
 
     # gc.collect()
@@ -98,40 +97,68 @@ app = FastAPI(lifespan=lifecycle)
 async def ws(websocket: WebSocket):
     await websocket.accept()
     wav_file_name = websocket.app.state.wav_file_name
+    tempfile_fp = path / "audio_in" / wav_file_name
+
+    # in real-world scenario - need ids of the frontend client sender to know which client sound chunk belongs to
+    result_processing_task = asyncio.create_task(process_chunks(websocket=websocket))
 
     try:
-        async with aiofiles.open(path / "audio" / wav_file_name, "wb") as temp_audio:
+        async with aiofiles.open(tempfile_fp, "wb") as temp_audio:
             while True:
                 sound_chunk = await websocket.receive_bytes()
 
                 await temp_audio.write(sound_chunk)
-                await websocket.send_text("DEBUG: Inserted bytes to wav file")
+                # await websocket.send_text("DEBUG: Inserted chunk to wav file")
+
+                async with AIOPikaProducer(settings) as producer:
+                    await producer.produce_message(json.dumps({"fp": wav_file_name}))
+                    logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
+                # await websocket.send_bytes(sound_chunk)
 
     except starlette.websockets.WebSocketDisconnect:
         logger.debug("websocket disconnect")
 
     finally:
-        async with AIOPikaProducer(settings) as producer:
-            await producer.produce_message(json.dumps({"fp": wav_file_name}))
-            logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
-
         wav_file_name = generate_wav_file_name()
         websocket.app.state.wav_file_name = wav_file_name
 
 
 @app.post("/process")
-async def process_audio(file: Annotated[bytes, File]):
+async def process_audio(file: UploadFile = File(...)):
     wav_file_name = app.state.wav_file_name
-    async with aiofiles.open(path / "audio" / wav_file_name, "ab") as temp_audio:
-        await temp_audio.write(file)
+    tempfile_fp: pathlib.Path = (
+        path.parent.parent
+        / "whisper_turbo_selfhosted"
+        / "frontend"
+        / "whisper-realtime-frontend"
+        / "public"
+        / wav_file_name
+    )
+    async with aiofiles.open(tempfile_fp, "ab") as temp_audio:
+        await temp_audio.write(await file.read())
 
-    async with AIOPikaProducer(settings) as producer:
-        await producer.produce_message(json.dumps({"fp": wav_file_name}))
-        logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
+    # async with AIOPikaProducer(settings) as producer:
+    #     await producer.produce_message(json.dumps({"fp": wav_file_name}))
+    #     logger.info(f"Inserted msg in a queue for audio: {wav_file_name}")
 
+    # os.remove(tempfile_fp)
     app.state.wav_file_name = generate_wav_file_name()
 
-    return Response(status_code=201, content="Processing has started")
+    return JSONResponse(status_code=201, content={"fp": tempfile_fp.name})
+
+
+@app.get("/output")
+async def get_file_output(fp: str):
+    return Response(content=fp.split("/")[-1], status_code=200)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 if __name__ == "__main__":
