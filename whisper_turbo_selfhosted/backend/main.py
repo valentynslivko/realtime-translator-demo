@@ -15,8 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.websockets import WebSocket
 from jobs import process_chunks
+from processing import MODEL_OBJECT_VAULT
 from rmq import AIOPikaProducer
 from settings import get_settings
+from TTS.api import TTS
 from utils import generate_wav_file_name
 
 os.environ["SUNO_USE_SMALL_MODELS"] = "True"
@@ -60,13 +62,11 @@ async def lifecycle(app: FastAPI):
     # MODEL_OBJECT_VAULT["suno_processor"] = suno_processor
     # MODEL_OBJECT_VAULT["suno_model"] = suno_model
 
-    # logger.info("Loading TTS model...")
+    logger.info("Loading TTS model...")
     # MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/mai/tacotron2-DDC", gpu=True).to(
     #     "cuda:0"
     # )
-    # MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(
-    #     "cuda:0"
-    # )
+    MODEL_OBJECT_VAULT["tts"] = TTS("tts_models/fr/css10/vits").to("cuda:0")
 
     # tts_model = path / "downloads/uk_UA-ukrainian_tts-medium.onnx"
     # voice_model = PiperVoice.load(tts_model)
@@ -128,6 +128,7 @@ async def process_audio(file: UploadFile = File(...)):
     wav_file_name = app.state.wav_file_name
     tempfile_fp: pathlib.Path = (
         path.parent.parent
+        / "app"
         / "whisper_turbo_selfhosted"
         / "frontend"
         / "whisper-realtime-frontend"

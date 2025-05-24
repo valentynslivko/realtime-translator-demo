@@ -5,7 +5,7 @@ services:
     env_file:
       ./whisper_turbo_selfhosted/backend/.env
     ports:
-      - 8001:8001
+      - 8000:8000
     deploy:
       resources:
         reservations:
@@ -19,6 +19,8 @@ services:
       - whisper_cache:/root/.cache/whisper
       - ./tts_outputs/:/app/tts_outputs
       - ./whisper_turbo_selfhosted/backend/audio:/app/audio
+    # depends_on:
+    #   - rmq
   frontend:
     build:
       context: ./whisper_turbo_selfhosted/frontend/whisper-realtime-frontend

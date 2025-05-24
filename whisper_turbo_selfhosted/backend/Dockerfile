@@ -6,16 +6,21 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
 
-RUN pip uninstall torch torchvision torchaudio -y
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+ENV PATH="/root/.local/bin:$PATH"
 
-RUN pip uninstall coqpit -y
-RUN pip install coqpit-config
-RUN pip install coqui-tts
+COPY pyproject.toml* uv.lock* ./
+RUN uv venv && uv sync --frozen
+
+RUN uv pip uninstall torch torchvision torchaudio
+RUN uv pip install torch==2.6.0 torchaudio==2.6.0 torchvision --index-url https://download.pytorch.org/whl/cu118 
+
+
 
 COPY . /app
 
-CMD [ "python3", "main.py" ]
+ENV PATH="/app/.venv/bin:$PATH"
+
+CMD [ "/app/.venv/bin/python", "main.py" ]

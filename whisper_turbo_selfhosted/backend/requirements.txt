@@ -34,7 +34,9 @@ colorama==0.4.6
 coloredlogs==15.0.1
 confection==0.1.5
 contourpy==1.2.1
-
+# coqpit-config==0.2.0
+# coqui-tts==0.26.0
+# coqui-tts-trainer==0.2.3
 csvw==3.5.1
 curated-tokenizers==0.0.9
 curated-transformers==0.1.1
