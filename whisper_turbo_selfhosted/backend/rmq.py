@@ -152,17 +152,14 @@ class RMQConsumer(AIOPikaConsumer):
         msg_body = message.body.decode()
         message_obj = RMQAudioMessageDTO(**json.loads(msg_body))
         tts_fp = transcribe_to_speech_pipeline(message=message_obj)
-        print("*" * 30)
-        print(f"{tts_fp=}")
-        print("*" * 30)
 
         if tts_fp:
-            print("wasda")
             try:
                 async with aiofiles.open(tts_fp, "rb") as audio:
                     chunk_content = await audio.read()
                     await websocket.send_bytes(chunk_content)
                     logger.info("Sent bytes back")
+
             except Exception:
                 logger.error(f"err: {traceback.format_exc()}")
         return

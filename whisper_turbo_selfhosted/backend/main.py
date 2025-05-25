@@ -138,7 +138,6 @@ async def ws(websocket: WebSocket):
 async def process_audio(file: UploadFile = File(...)):
     wav_file_name = app.state.wav_file_name
     tempfile_fp: pathlib.Path = path / "audio_in" / wav_file_name
-    print(f"{tempfile_fp=}")
     async with aiofiles.open(tempfile_fp, "ab") as temp_audio:
         await temp_audio.write(await file.read())
 

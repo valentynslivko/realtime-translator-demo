@@ -156,8 +156,5 @@ def transcribe_to_speech_pipeline(message: RMQAudioMessageDTO):
     fp = TTS_processing(
         transcription_text=translated_text, output_audio_name=output_file
     )
-    print("~" * 30)
-    logger.info(f"tts output fp: {fp}")
-    print("~" * 30)
 
     return fp
