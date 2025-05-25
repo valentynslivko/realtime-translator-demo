@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 function PrerecordedDemoUpload() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [fpReturned, setFpReturned] = useState(null)
     const [isLoading, setIsLoading] = useState(false);
+    const [isAudioReady, setAudioReady] = useState(null)
 
     const fileInputRef = useRef(null); // To programmatically click the hidden file input
 
-    const BASE_URL = 'http://localhost:8000'
+    const BASE_URL = 'http://0.0.0.0:8000'
     const API_ENDPOINT_UPLOAD = '/process'
 
 
@@ -19,6 +20,27 @@ function PrerecordedDemoUpload() {
             setSelectedFile(null);
         }
     };
+
+    useEffect(() => {
+        if (!fpReturned) return
+
+        const checkAudioAvailability = async () => {
+            try {
+                const response = await fetch(`files/${fpReturned}`, { method: 'HEAD' })
+                if (response.ok) {
+                    setAudioReady(true)
+                } else {
+                    // Retry after 1 second
+                    setTimeout(checkAudioAvailability, 3000)
+                }
+            } catch (error) {
+                // Retry after 1 second on network errors
+                setTimeout(checkAudioAvailability, 3000)
+            }
+        }
+
+        checkAudioAvailability()
+    }, [fpReturned])
 
     const handleUpload = async () => {
         if (!selectedFile) {
@@ -109,29 +131,20 @@ function PrerecordedDemoUpload() {
                     Ready to upload: <strong>{selectedFile.name}</strong>
                 </p>
             )}
-            {/* <div className='flex flex-col items-center mt-10 space-y-4'>
-                <h3>Debug Log:</h3>
-                <textarea
-                    // value={debugLog}
-                    readOnly
-                    rows={5}
-                    placeholder="Events will be logged here..."
-                />
-            </div> */}
-            {fpReturned ? <div className='mt-16 flex flex-col items-center space-y-2'>
-                <p>Processed audio: </p>
-                <audio controls>
-                    <source src={fpReturned} type="audio/mpeg" />
-                    Your browser does not support the audio element.
-                </audio>
-            </div> : null}
-            {/* <div>
-                <p>Processed audio: </p>
-                <audio controls>
-                    <source src="" type="audio/mpeg" />
-                    Your browser does not support the audio element.
-                </audio>
-            </div> */}
+
+            {fpReturned && (
+                <div className='mt-16 flex flex-col items-center space-y-2'>
+                    <p>Processed audio: </p>
+                    {isAudioReady ? (
+                        <audio controls>
+                            <source src={`files/${fpReturned}`} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                        </audio>
+                    ) : (
+                        <p>Loading audio...</p>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

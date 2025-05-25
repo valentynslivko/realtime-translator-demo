@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import traceback
 from typing import Any, Callable, Optional
 
 from aiormq import AMQPConnectionError
@@ -55,9 +56,16 @@ async def process_available_messages() -> None:
 
 
 async def process_chunks(websocket: WebSocket):
+    logger.info("=" * 30)
+    logger.info("Processing WS chunk")
+    logger.info("=" * 30)
+
     try:
         async with RMQConsumer(settings=settings) as rmq:
             await rmq.return_sound_chunk(websocket=websocket)
     except AMQPConnectionError as e:
-        print(f"Error while getting messages from queue: {e}")
+        logger.error(f"Error while getting messages from queue: {e}")
         return None
+    except Exception as e:
+        logger.error(f"err: {traceback.format_exc()}")
+        raise e

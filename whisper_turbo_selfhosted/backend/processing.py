@@ -3,6 +3,7 @@ import logging
 import os
 
 # from kokoro import KPipeline
+import pathlib
 import wave
 from pathlib import Path
 from typing import Optional, Union
@@ -11,7 +12,7 @@ from piper.voice import PiperVoice
 from schemas import RMQAudioMessageDTO
 from scipy.io.wavfile import write as write_wav
 from translation import translate_message
-from utils import generate_wav_file_name, timer
+from utils import generate_wav_file_name
 from whisper import Whisper
 
 path = Path(__file__).absolute().parent
@@ -35,8 +36,8 @@ def transcribe_audio(message: RMQAudioMessageDTO):
     if not whisper_model:
         raise Exception("Whisper was not initialized correctly, aborting")
 
-    transcription = whisper_model.transcribe(str(path / "audio" / message.fp))
-    return transcription["text"]
+    transcription = whisper_model.transcribe(message.fp)
+    return {"text": transcription["text"], "fp": message.fp}
 
 
 def translate_from_transcribe(
@@ -116,21 +117,24 @@ def suno_tts(transcription_text: str):
     return
 
 
-def TTS_processing(transcription_text: str):
+def TTS_processing(transcription_text: str, output_audio_name: str):
     tts = MODEL_OBJECT_VAULT.get("tts")
     if not tts:
-        raise Exception("suno_processor was not initialized correctly, aborting")
-    fp = str(path / f"tts_outputs/{generate_wav_file_name()}")
+        raise Exception("TTS was not initialized correctly, aborting")
+
+    fp = str(path / f"tts_outputs/{output_audio_name}")
     tts.tts_to_file(
         text=transcription_text,
         file_path=fp,
     )
+    logger.info(f"Wrote tts output to {fp}")
     return fp
 
 
-@timer
+# @timer
 def transcribe_to_speech_pipeline(message: RMQAudioMessageDTO):
-    text = transcribe_audio(message=message)
+    transcribe = transcribe_audio(message=message)
+    text = transcribe["text"]
     logger.info("=" * 30)
     logger.info(f"transcription: {text}")
     logger.info("=" * 30)
@@ -145,7 +149,15 @@ def transcribe_to_speech_pipeline(message: RMQAudioMessageDTO):
     logger.info(f"translation: {translated_text}")
     logger.info("=" * 30)
 
+    output_file = pathlib.Path(transcribe["fp"]).name
     # tts_output = tts_from_transcription(transctiption_text=translated_text)
     # tts_output = kokoro_tts(transcription_text=translated_text)
     # tts_output = suno_tts(transcription_text=translated_text)
-    return TTS_processing(transcription_text=translated_text)
+    fp = TTS_processing(
+        transcription_text=translated_text, output_audio_name=output_file
+    )
+    print("~" * 30)
+    logger.info(f"tts output fp: {fp}")
+    print("~" * 30)
+
+    return fp

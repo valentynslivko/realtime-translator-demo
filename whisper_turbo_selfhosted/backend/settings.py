@@ -1,6 +1,7 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings
+
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -11,6 +12,7 @@ class Settings(BaseSettings):
     rmq_user: str = Field(env="RMQ_USER", alias="RMQ_USER")
 
     audio_queue_name: str = Field(default="audio_queue")
+    streams_queue_name: str = Field(default="audio_streams")
 
 
 @lru_cache

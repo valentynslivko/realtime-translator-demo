@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import traceback
 from typing import Union
 
 import aio_pika
@@ -92,10 +93,10 @@ class AIOPikaProducer:
         except exc_type:
             logger.error(f"Producer has failed unexpectedly: {exc_tb}")
 
-    async def produce_message(self, message: str):
+    async def produce_message(self, message: str, queue_name: str = "audio_queue"):
         await self._channel.default_exchange.publish(
             aio_pika.Message(body=message.encode()),
-            routing_key=self.queue_name,  # noqa
+            routing_key=queue_name,  # noqa
         )
         logger.info(f"Sent {message} in {self.queue_name} queue")
 
@@ -151,11 +152,19 @@ class RMQConsumer(AIOPikaConsumer):
         msg_body = message.body.decode()
         message_obj = RMQAudioMessageDTO(**json.loads(msg_body))
         tts_fp = transcribe_to_speech_pipeline(message=message_obj)
+        print("*" * 30)
         print(f"{tts_fp=}")
+        print("*" * 30)
+
         if tts_fp:
-            async with aiofiles.open(tts_fp, "rb") as audio:
-                chunk_content = audio.read()
-                await websocket.send_bytes(chunk_content)
+            print("wasda")
+            try:
+                async with aiofiles.open(tts_fp, "rb") as audio:
+                    chunk_content = await audio.read()
+                    await websocket.send_bytes(chunk_content)
+                    logger.info("Sent bytes back")
+            except Exception:
+                logger.error(f"err: {traceback.format_exc()}")
         return
 
     async def get_all_messages(self) -> None:
@@ -187,20 +196,20 @@ class RMQConsumer(AIOPikaConsumer):
 
         await self._channel.set_qos(prefetch_count=100)
         queue = await self._channel.declare_queue(
-            self.settings.audio_queue_name,
+            self.settings.streams_queue_name,
             auto_delete=False,
             durable=True,
             passive=True,
         )
+
         while True:
             try:
                 message = await queue.get(no_ack=False)
-                logger.debug("Received message")
+                logger.info("WS consumer Received message")
                 # open chunk, send bytes
             except aio_pika.exceptions.QueueEmpty:
-                break
+                continue
             async with message.process():
                 await self._process_sound_chunk_message(
                     message=message, websocket=websocket
                 )
-        return None

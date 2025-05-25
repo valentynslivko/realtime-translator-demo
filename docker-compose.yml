@@ -17,15 +17,20 @@ services:
       - hf_cache:/root/.cache/huggingface
       - tts_cache:/root/.local/share/tts
       - whisper_cache:/root/.cache/whisper
-      - ./tts_outputs/:/app/tts_outputs
-      - ./whisper_turbo_selfhosted/backend/audio:/app/audio
-    # depends_on:
-    #   - rmq
+      - tts_outputs:/app/tts_outputs
+      - shared_files:/app/audio_in
+    depends_on:
+      - rmq
+    container_name: demo-be
   frontend:
     build:
       context: ./whisper_turbo_selfhosted/frontend/whisper-realtime-frontend
     ports:
       - 80:80
+    volumes:
+      - shared_files:/usr/share/nginx/html/files
+      - tts_outputs:/usr/share/nginx/html/files
+    container_name: demo-fe
 
   rmq:
     image: rabbitmq:3-management
@@ -50,4 +55,6 @@ volumes:
   hf_cache:
   tts_cache:
   whisper_cache:
+  shared_files:
+  tts_outputs:
       

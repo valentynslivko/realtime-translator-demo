@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-const WEBSOCKET_URL = 'ws://localhost:8000/ws'; // Replace with your WebSocket server URL
+const WEBSOCKET_URL = 'ws://0.0.0.0:8000/ws'; // Replace with your WebSocket server URL
 const RECORDING_TIMESLICE_MS = 3000; // Send audio chunks every 3 seconds
 
 const AudioRecorderPlayer = () => {
@@ -28,6 +28,9 @@ const AudioRecorderPlayer = () => {
         };
 
         ws.onmessage = (event) => {
+            console.log('received messagee from be:')
+            console.log(event)
+            console.log('===================================')
             if (event.data instanceof Blob) {
                 console.log('Received audio chunk from backend:', event.data);
                 audioChunksFromSocketRef.current.push(event.data);
@@ -175,16 +178,18 @@ const AudioRecorderPlayer = () => {
     }, [audioURL]);
 
     return (
-        <div>
-            <h2>Audio Recorder & Player</h2>
-            <p>Status: {statusMessage}</p>
+        <div className='flex flex-col items-center space-y-4 mt-6'>
+            <h2 className='text-xl font-medium'>Audio stream player</h2>
+            <div className='flex flex-col items-center'>
+                <p className='font-medium'>Status:</p> <p className={webSocketRef.current ? "text-green-400" : "text-red-400"}>{statusMessage}</p>
+            </div>
             <div>
                 {!isRecording ? (
-                    <button onClick={startRecording} disabled={!webSocketRef.current || webSocketRef.current.readyState !== WebSocket.OPEN}>
+                    <button onClick={startRecording} disabled={!webSocketRef.current || webSocketRef.current.readyState !== WebSocket.OPEN} className='border border-green-400 bg-green-400 rounded-xl p-2 text-gray-700 font-medium hover:bg-cyan-400 hover:border-cyan-400 hover:cursor-pointer'>
                         Start Recording
                     </button>
                 ) : (
-                    <button onClick={stopRecording}>Stop Recording</button>
+                    <button onClick={stopRecording} className='border border-amber-400 bg-amber-400 font-medium rounded-xl p-2 text-gray-700 hover:cursor-pointer hover:bg-amber-800'>Stop Recording</button>
                 )}
             </div>
 
